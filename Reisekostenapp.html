@@ -1,0 +1,2058 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reisekosten & Belege</title>
+    
+    <!-- Third-party libraries for PDF & Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Feather Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+    <style>
+        /* CSS Reset and Base Styles */
+        :root {
+            --primary-color: #007aff;
+            --primary-color-dark: #005bb5;
+            --secondary-color: #f2f2f7;
+            --background-color: #ffffff;
+            --text-color: #1c1c1e;
+            --text-color-light: #8e8e93;
+            --border-color: #e5e5ea;
+            --danger-color: #ff3b30;
+            --success-color: #34c759;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --border-radius: 12px;
+        }
+
+        .dark-mode {
+            --primary-color: #0a84ff;
+            --primary-color-dark: #0060df;
+            --secondary-color: #1c1c1e;
+            --background-color: #000000;
+            --text-color: #ffffff;
+            --text-color-light: #8d8d92;
+            --border-color: #38383a;
+            --danger-color: #ff453a;
+            --success-color: #30d158;
+            --card-bg: #1c1c1e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.5;
+            transition: background-color 0.3s, color 0.3s;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Layout */
+        #app {
+            max-width: 800px;
+            margin: 0 auto;
+            padding-bottom: 100px; /* Space for nav bar */
+        }
+        
+        header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background-color: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color-light);
+            background: none;
+            border: none;
+            font-size: 0.7rem;
+            cursor: pointer;
+            padding: 10px;
+            transition: color 0.2s, transform 0.2s;
+            flex-grow: 1;
+        }
+        
+        .nav-item i {
+            width: 28px;
+            height: 28px;
+            margin-bottom: 4px;
+        }
+
+        .nav-item.active {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        .nav-item:active {
+            transform: scale(0.95);
+        }
+
+        /* Components */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: background-color 0.3s;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-header h2 {
+            font-size: 1.2rem;
+            margin: 0;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-color-dark);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            border: 1px solid var(--border-color);
+        }
+        .btn-secondary:hover {
+            background-color: var(--border-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+        }
+        .btn-danger:hover {
+             background-color: #d93228;
+        }
+
+        .btn-full-width {
+            width: 100%;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            color: var(--text-color-light);
+        }
+        .btn-icon:hover {
+            color: var(--primary-color);
+        }
+        .btn-icon i {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .fab {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            border: none;
+            cursor: pointer;
+            z-index: 999;
+            transition: transform 0.2s ease-out;
+        }
+        .fab:active {
+            transform: scale(0.95);
+        }
+        .fab i {
+            width: 28px;
+            height: 28px;
+        }
+        
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--text-color-light);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
+        }
+        
+        .form-control[readonly] {
+            background-color: var(--border-color);
+        }
+
+        .form-error-message {
+            color: var(--danger-color);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+        
+        /* Report List */
+        .report-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .report-list-item:hover {
+            background-color: var(--secondary-color);
+        }
+        .report-list-item .info {
+            flex-grow: 1;
+        }
+        .report-list-item .name {
+            font-weight: 600;
+        }
+        .report-list-item .details {
+            font-size: 0.9rem;
+            color: var(--text-color-light);
+        }
+        .report-list-item .total {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        /* Expense List */
+        .expense-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .expense-icon {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 15px;
+            color: var(--primary-color);
+        }
+        .expense-icon i {
+            width: 22px;
+            height: 22px;
+        }
+        .expense-info {
+            flex-grow: 1;
+        }
+        .expense-info .description {
+            font-weight: 500;
+        }
+        .expense-info .date {
+            font-size: 0.8rem;
+            color: var(--text-color-light);
+        }
+        .expense-amount {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        /* Receipt Preview */
+        .receipt-preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .receipt-preview-item {
+            position: relative;
+        }
+        .receipt-preview-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .remove-receipt-btn {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 14px;
+            line-height: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        /* Summary Table */
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .summary-table th, .summary-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .summary-table th {
+            font-weight: 600;
+        }
+        .summary-table .total-row {
+            font-weight: bold;
+            border-top: 2px solid var(--text-color);
+        }
+
+        /* Helpers */
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .mt-20 { margin-top: 20px; }
+        
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border-color);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+        
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            display: none; /* Changed from flex */
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background-color: var(--card-bg);
+            margin: auto;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .modal-header h2 {
+            font-size: 1.3rem;
+        }
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--text-color-light);
+            cursor: pointer;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(28, 28, 30, 0.9);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 3000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s, bottom 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .toast.show {
+            opacity: 1;
+            visibility: visible;
+            bottom: 120px;
+        }
+        
+        /* Print styles */
+        @media print {
+            body {
+                --background-color: #fff;
+                --text-color: #000;
+                --card-bg: #fff;
+                --border-color: #ccc;
+            }
+            .bottom-nav, .fab, header, .no-print {
+                display: none !important;
+            }
+            #app {
+                padding-bottom: 0;
+            }
+            main {
+                padding: 0;
+            }
+            .card {
+                box-shadow: none;
+                border: 1px solid var(--border-color);
+            }
+            .view {
+                display: block !important;
+                animation: none !important;
+            }
+            a {
+                text-decoration: none;
+                color: inherit;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <header>
+            <h1 id="header-title">Abrechnungen</h1>
+            <div id="settings-button-container">
+                <button class="btn-icon" id="settings-button" title="Einstellungen">
+                    <i data-feather="settings"></i>
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <!-- View: List of all reports -->
+            <div id="reports-view" class="view active">
+                <div class="card">
+                    <button class="btn btn-full-width" id="monthly-summary-btn"><i data-feather="calendar"></i> Monatliche Gesamtabrechnung</button>
+                </div>
+                <div id="report-list">
+                    <!-- Reports will be dynamically inserted here -->
+                </div>
+                <div id="no-reports-message" class="card text-center hidden">
+                    <p>Noch keine Abrechnungen erfasst.</p>
+                    <p class="text-color-light">Klicken Sie auf das Plus, um Ihre erste Abrechnung anzulegen.</p>
+                </div>
+            </div>
+
+            <!-- View: Details of a single report -->
+            <div id="report-detail-view" class="view">
+                <button class="btn btn-secondary mb-20" id="back-to-reports-btn"><i data-feather="arrow-left"></i> Zurück zur Übersicht</button>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 id="report-detail-title"></h2>
+                    </div>
+                    <div id="report-metadata" class="text-color-light" style="margin-bottom: 20px;"></div>
+                    <div id="report-summary"></div>
+                    <div id="expense-list"></div>
+                    <button class="btn btn-full-width mt-20" id="add-expense-to-report-btn"><i data-feather="plus"></i> Neuen Beleg hinzufügen</button>
+                </div>
+                <div class="card">
+                     <div class="card-header">
+                        <h2>Abrechnung & Export</h2>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn" id="export-pdf-btn"><i data-feather="file-text"></i> PDF</button>
+                        <button class="btn" id="export-excel-btn"><i data-feather="grid"></i> Excel</button>
+                        <button class="btn btn-secondary" id="print-btn"><i data-feather="printer"></i> Drucken</button>
+                    </div>
+                </div>
+                 <div class="card">
+                    <button class="btn btn-danger btn-full-width" id="delete-report-btn"><i data-feather="trash-2"></i> Abrechnung löschen</button>
+                </div>
+            </div>
+
+            <!-- View: Form to add/edit a report or an expense -->
+            <div id="form-view" class="view">
+                <form id="main-form" novalidate>
+                    <input type="hidden" id="form-mode">
+                    <input type="hidden" id="report-id-input">
+                    <input type="hidden" id="expense-id-input">
+
+                    <!-- Report-specific fields -->
+                    <div id="report-fields">
+                         <div class="card">
+                            <div class="form-group">
+                                <label for="report-type">Abrechnungsart</label>
+                                <select id="report-type" class="form-control" required>
+                                    <option value="reise">Reisekosten</option>
+                                    <option value="bewirtung">Bewirtung</option>
+                                </select>
+                            </div>
+                             <div class="form-group">
+                                <label for="report-name">Name der Abrechnung</label>
+                                <input type="text" id="report-name" class="form-control" placeholder="z.B. Messebesuch München" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="employee-name">Name des Arbeitnehmers</label>
+                                <input type="text" id="employee-name" class="form-control" placeholder="Max Mustermann" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="billing-month">Abrechnungsmonat</label>
+                                <input type="month" id="billing-month" class="form-control" required>
+                            </div>
+                         </div>
+                    </div>
+
+                    <!-- Expense-specific fields -->
+                    <div id="expense-fields" class="hidden">
+                        <div class="card">
+                             <div class="card-header">
+                                <h2 id="expense-form-title">Neuer Beleg</h2>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-date">Datum</label>
+                                <input type="date" id="expense-date" class="form-control" required>
+                            </div>
+
+                            <div class="form-group" id="category-select-group">
+                                <label for="expense-category">Kategorie</label>
+                                <select id="expense-category" class="form-control" required>
+                                    <option value="fahrt">Fahrtkosten</option>
+                                    <option value="übernachtung">Übernachtungskosten</option>
+                                    <option value="verpflegung">Verpflegungspauschale</option>
+                                    <option value="geschäftsessen">Geschäftsessen</option>
+                                    <option value="sonstiges">Sonstige Auslagen</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Category-specific fields will be injected here -->
+                            <div id="category-specific-fields"></div>
+                            
+                             <div class="form-group">
+                                <label for="expense-description">Beschreibung / Zweck</label>
+                                <input type="text" id="expense-description" class="form-control" placeholder="z.B. Taxi zum Hotel" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="expense-amount">Gesamtbetrag (€)</label>
+                                <input type="number" id="expense-amount" class="form-control" placeholder="0.00" step="0.01" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="expense-vat">MwSt. (%)</label>
+                                <input type="number" id="expense-vat" class="form-control" value="19" step="0.01">
+                            </div>
+
+                             <div class="form-group">
+                                <label for="expense-project">Projekt / Kostenstelle (optional)</label>
+                                <input type="text" id="expense-project" class="form-control" placeholder="Projekt XY">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Beleg hinzufügen</label>
+                                <input type="file" id="receipt-upload-input" class="hidden" accept="image/*" multiple>
+                                <input type="file" id="receipt-camera-input" class="hidden" accept="image/*" capture="environment">
+                                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                                    <button type="button" class="btn btn-secondary" id="receipt-upload-btn"><i data-feather="upload"></i> Hochladen</button>
+                                    <button type="button" class="btn btn-secondary" id="receipt-camera-btn"><i data-feather="camera"></i> Scannen</button>
+                                </div>
+                                <div id="receipt-preview-container" class="receipt-preview-container"></div>
+                            </div>
+
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions" style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-full-width" id="save-btn">Speichern</button>
+                        <button type="button" class="btn btn-secondary btn-full-width" id="cancel-btn">Abbrechen</button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- View: Settings -->
+            <div id="settings-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Einstellungen</h2>
+                    </div>
+                    <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="dark-mode-toggle">Dark Mode</label>
+                        <label class="switch">
+                            <input type="checkbox" id="dark-mode-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="card">
+                     <div class="card-header">
+                        <h2>Daten-Management</h2>
+                    </div>
+                    <p class="text-color-light mb-20">Sichern Sie Ihre Daten oder stellen Sie eine Sicherung wieder her.</p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                         <button class="btn" id="backup-btn"><i data-feather="download"></i> Backup erstellen</button>
+                        <button class="btn btn-secondary" id="restore-btn-action"><i data-feather="upload"></i> Restore</button>
+                        <input type="file" id="restore-input" class="hidden" accept=".json">
+                    </div>
+                </div>
+                 <div class="card">
+                    <button class="btn btn-danger btn-full-width" id="delete-all-data-btn"><i data-feather="trash-2"></i> Alle Daten löschen</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <button id="fab" class="fab no-print">
+        <i data-feather="plus"></i>
+    </button>
+    
+    <!-- Modal for confirming actions -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="confirm-modal-title">Bestätigung</h2>
+                <span class="close-button" id="confirm-modal-close">&times;</span>
+            </div>
+            <p id="confirm-modal-text">Möchten Sie diesen Vorgang wirklich durchführen?</p>
+            <div class="mt-20" style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" id="confirm-modal-cancel">Abbrechen</button>
+                <button class="btn btn-danger" id="confirm-modal-confirm">Bestätigen</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for month selection -->
+    <div id="month-select-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Monat auswählen</h2>
+                <span class="close-button" id="month-select-modal-close">&times;</span>
+            </div>
+            <div class="form-group">
+                <label for="summary-month">Abrechnungsmonat</label>
+                <input type="month" id="summary-month" class="form-control" required>
+            </div>
+            <div class="mt-20" style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" id="month-select-modal-cancel">Abbrechen</button>
+                <button class="btn" id="month-select-modal-generate">Abrechnung erstellen</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast-notification" class="toast"></div>
+
+
+    <nav class="bottom-nav no-print">
+        <button class="nav-item active" data-view="reports-view">
+            <i data-feather="briefcase"></i>
+            <span>Abrechnungen</span>
+        </button>
+        <button class="nav-item" data-view="settings-view">
+            <i data-feather="settings"></i>
+            <span>Einstellungen</span>
+        </button>
+    </nav>
+    
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- App State & Initialization ---
+            const app = {
+                state: {
+                    reports: [],
+                    currentView: 'reports-view',
+                    currentReportId: null,
+                    formMode: null, // 'new-report', 'edit-report', 'new-expense', 'edit-expense'
+                    editExpenseId: null,
+                    darkMode: false,
+                    tempReceipts: [] 
+                },
+                
+                // DOM Elements
+                elements: {
+                    headerTitle: document.getElementById('header-title'),
+                    views: document.querySelectorAll('.view'),
+                    navItems: document.querySelectorAll('.nav-item'),
+                    settingsButton: document.getElementById('settings-button'),
+                    fab: document.getElementById('fab'),
+                    // Views
+                    reportsView: document.getElementById('reports-view'),
+                    reportDetailView: document.getElementById('report-detail-view'),
+                    formView: document.getElementById('form-view'),
+                    settingsView: document.getElementById('settings-view'),
+                    // Report List
+                    monthlySummaryBtn: document.getElementById('monthly-summary-btn'),
+                    reportList: document.getElementById('report-list'),
+                    noReportsMessage: document.getElementById('no-reports-message'),
+                    // Report Detail
+                    backToReportsBtn: document.getElementById('back-to-reports-btn'),
+                    reportDetailTitle: document.getElementById('report-detail-title'),
+                    reportMetadata: document.getElementById('report-metadata'),
+                    reportSummary: document.getElementById('report-summary'),
+                    expenseList: document.getElementById('expense-list'),
+                    addExpenseToReportBtn: document.getElementById('add-expense-to-report-btn'),
+                    exportPdfBtn: document.getElementById('export-pdf-btn'),
+                    exportExcelBtn: document.getElementById('export-excel-btn'),
+                    printBtn: document.getElementById('print-btn'),
+                    deleteReportBtn: document.getElementById('delete-report-btn'),
+                    // Form
+                    mainForm: document.getElementById('main-form'),
+                    formModeInput: document.getElementById('form-mode'),
+                    reportIdInput: document.getElementById('report-id-input'),
+                    expenseIdInput: document.getElementById('expense-id-input'),
+                    reportFields: document.getElementById('report-fields'),
+                    expenseFields: document.getElementById('expense-fields'),
+                    reportTypeSelect: document.getElementById('report-type'),
+                    reportNameInput: document.getElementById('report-name'),
+                    employeeNameInput: document.getElementById('employee-name'),
+                    billingMonthInput: document.getElementById('billing-month'),
+                    expenseFormTitle: document.getElementById('expense-form-title'),
+                    expenseDateInput: document.getElementById('expense-date'),
+                    categorySelectGroup: document.getElementById('category-select-group'),
+                    expenseCategorySelect: document.getElementById('expense-category'),
+                    expenseDescriptionInput: document.getElementById('expense-description'),
+                    categorySpecificFields: document.getElementById('category-specific-fields'),
+                    expenseAmountInput: document.getElementById('expense-amount'),
+                    expenseVatInput: document.getElementById('expense-vat'),
+                    expenseProjectInput: document.getElementById('expense-project'),
+                    receiptUploadBtn: document.getElementById('receipt-upload-btn'),
+                    receiptCameraBtn: document.getElementById('receipt-camera-btn'),
+                    receiptUploadInput: document.getElementById('receipt-upload-input'),
+                    receiptCameraInput: document.getElementById('receipt-camera-input'),
+                    receiptPreviewContainer: document.getElementById('receipt-preview-container'),
+                    saveBtn: document.getElementById('save-btn'),
+                    cancelBtn: document.getElementById('cancel-btn'),
+                    // Settings
+                    darkModeToggle: document.getElementById('dark-mode-toggle'),
+                    backupBtn: document.getElementById('backup-btn'),
+                    restoreBtn: document.getElementById('restore-btn-action'),
+                    restoreInput: document.getElementById('restore-input'),
+                    deleteAllDataBtn: document.getElementById('delete-all-data-btn'),
+                    // Modals & Toast
+                    confirmModal: document.getElementById('confirm-modal'),
+                    confirmModalTitle: document.getElementById('confirm-modal-title'),
+                    confirmModalText: document.getElementById('confirm-modal-text'),
+                    confirmModalClose: document.getElementById('confirm-modal-close'),
+                    confirmModalCancel: document.getElementById('confirm-modal-cancel'),
+                    confirmModalConfirm: document.getElementById('confirm-modal-confirm'),
+                    monthSelectModal: document.getElementById('month-select-modal'),
+                    monthSelectModalClose: document.getElementById('month-select-modal-close'),
+                    monthSelectModalCancel: document.getElementById('month-select-modal-cancel'),
+                    monthSelectModalGenerate: document.getElementById('month-select-modal-generate'),
+                    summaryMonthInput: document.getElementById('summary-month'),
+                    toast: document.getElementById('toast-notification'),
+                },
+                
+                // Tax & Per Diem Rates (German Standards 2024/2025)
+                constants: {
+                    MILEAGE_RATE_CAR: 0.30,
+                    PER_DIEM_GERMANY_FULL_DAY: 28.00,
+                    PER_DIEM_GERMANY_ARRIVAL_DEPARTURE: 14.00,
+                    PER_DIEM_GERMANY_GT_8_HOURS: 14.00,
+                },
+
+                // ---- CORE METHODS ----
+                init() {
+                    this.loadState();
+                    this.setupEventListeners();
+                    this.render();
+                    feather.replace(); // Initialize Feather Icons
+                },
+                
+                loadState() {
+                    const savedReports = localStorage.getItem('kosten-app-reports');
+                    if (savedReports) {
+                        this.state.reports = JSON.parse(savedReports);
+                    }
+                    const savedDarkMode = localStorage.getItem('kosten-app-darkmode');
+                    this.state.darkMode = savedDarkMode === 'true';
+                },
+                
+                saveState() {
+                    localStorage.setItem('kosten-app-reports', JSON.stringify(this.state.reports));
+                    localStorage.setItem('kosten-app-darkmode', this.state.darkMode);
+                },
+
+                render() {
+                    // Apply Dark Mode
+                    if (this.state.darkMode) {
+                        document.documentElement.classList.add('dark-mode');
+                        this.elements.darkModeToggle.checked = true;
+                    } else {
+                        document.documentElement.classList.remove('dark-mode');
+                        this.elements.darkModeToggle.checked = false;
+                    }
+
+                    // Show current view
+                    this.elements.views.forEach(view => {
+                        view.classList.toggle('active', view.id.startsWith(this.state.currentView));
+                    });
+
+                    // Update header title and nav
+                    this.elements.navItems.forEach(item => {
+                         item.classList.toggle('active', item.dataset.view === this.state.currentView);
+                    });
+                    this.elements.settingsButton.style.display = 'block';
+
+                    switch (this.state.currentView) {
+                        case 'reports-view':
+                            this.elements.headerTitle.textContent = 'Abrechnungen';
+                            this.elements.fab.style.display = 'flex';
+                            this.renderReportList();
+                            break;
+                        case 'report-detail-view':
+                            this.elements.fab.style.display = 'none';
+                            this.renderReportDetail();
+                            break;
+                        case 'form-view':
+                            this.elements.fab.style.display = 'none';
+                            this.renderForm();
+                            break;
+                        case 'settings-view':
+                            this.elements.headerTitle.textContent = 'Einstellungen';
+                            this.elements.settingsButton.style.display = 'none';
+                            this.elements.fab.style.display = 'none';
+                            break;
+                    }
+                    feather.replace();
+                },
+
+                switchView(viewId, reportId = null) {
+                    this.state.currentView = viewId;
+                    this.state.currentReportId = reportId;
+                    this.render();
+                    window.scrollTo(0, 0);
+                },
+
+                // --- RENDERING FUNCTIONS ---
+                
+                renderReportList() {
+                    this.elements.reportList.innerHTML = '';
+                    if (this.state.reports.length === 0) {
+                        this.elements.noReportsMessage.classList.remove('hidden');
+                        return;
+                    }
+                    this.elements.noReportsMessage.classList.add('hidden');
+                    
+                    const sortedReports = [...this.state.reports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+                    sortedReports.forEach(report => {
+                        const total = this.calculateReportTotal(report);
+                        const reportTypeLabel = report.reportType === 'reise' ? 'Reisekosten' : 'Bewirtung';
+                        
+                        const item = document.createElement('div');
+                        item.className = 'report-list-item';
+                        item.dataset.reportId = report.id;
+                        item.innerHTML = `
+                            <div class="info">
+                                <div class="name">${report.name}</div>
+                                <div class="details">${report.employeeName} &bull; ${reportTypeLabel}</div>
+                            </div>
+                            <div class="total">${total.toFixed(2)} €</div>
+                            <i data-feather="chevron-right"></i>
+                        `;
+                        item.addEventListener('click', () => this.switchView('report-detail-view', report.id));
+                        this.elements.reportList.appendChild(item);
+                    });
+                     feather.replace();
+                },
+                
+                renderReportDetail() {
+                    const report = this.state.reports.find(r => r.id === this.state.currentReportId);
+                    if (!report) {
+                        this.switchView('reports-view');
+                        return;
+                    }
+                    
+                    this.elements.headerTitle.textContent = 'Abrechnungsdetails';
+                    this.elements.reportDetailTitle.textContent = report.name;
+                    this.elements.reportMetadata.innerHTML = `
+                        <span>Mitarbeiter: <strong>${report.employeeName}</strong></span><br>
+                        <span>Abrechnungsmonat: <strong>${new Date(report.billingMonth + '-02').toLocaleString('de-DE', { month: 'long', year: 'numeric' })}</strong></span>
+                    `;
+                    this.renderReportSummary(report);
+                    
+                    this.elements.expenseList.innerHTML = '';
+                    if (report.expenses.length > 0) {
+                        report.expenses.forEach(expense => {
+                            const item = document.createElement('div');
+                            item.className = 'expense-item';
+                            item.dataset.expenseId = expense.id;
+                            item.innerHTML = `
+                                <div class="expense-icon"><i data-feather="${this.getIconForCategory(expense.category)}"></i></div>
+                                <div class="expense-info">
+                                    <div class="description">${expense.description}</div>
+                                    <div class="date">${new Date(expense.date).toLocaleDateString('de-DE')} &bull; ${this.getCategoryLabel(expense.category)}</div>
+                                </div>
+                                <div class="expense-amount">${expense.amount.toFixed(2)} €</div>
+                                <button class="btn-icon edit-expense-btn" data-expense-id="${expense.id}"><i data-feather="edit"></i></button>
+                                <button class="btn-icon delete-expense-btn" data-expense-id="${expense.id}"><i data-feather="trash-2"></i></button>
+                            `;
+                            this.elements.expenseList.appendChild(item);
+                        });
+                        
+                        this.elements.expenseList.querySelectorAll('.edit-expense-btn').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                this.startEditExpense(btn.dataset.expenseId);
+                            });
+                        });
+                        
+                        this.elements.expenseList.querySelectorAll('.delete-expense-btn').forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                this.showConfirmModal('Beleg löschen?', 'Möchten Sie diesen Beleg wirklich unwiderruflich löschen?', () => this.deleteExpense(btn.dataset.expenseId));
+                            });
+                        });
+
+                    } else {
+                        this.elements.expenseList.innerHTML = `<p class="text-center text-color-light mt-20">Noch keine Belege für diese Abrechnung erfasst.</p>`;
+                    }
+                    feather.replace();
+                },
+
+                renderReportSummary(report) {
+                    const total = this.calculateReportTotal(report);
+                    const totalVat = this.calculateReportVat(report);
+                    const summaryByCategory = this.calculateSummaryByCategory(report);
+
+                    let summaryHtml = `
+                        <table class="summary-table">
+                            <thead>
+                                <tr><th>Kategorie</th><th style="text-align: right;">Betrag</th></tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    for (const [category, amount] of Object.entries(summaryByCategory)) {
+                        summaryHtml += `
+                            <tr>
+                                <td>${this.getCategoryLabel(category)}</td>
+                                <td style="text-align: right;">${amount.toFixed(2)} €</td>
+                            </tr>
+                        `;
+                    }
+                    
+                    summaryHtml += `
+                                <tr class="total-row">
+                                    <td>Gesamtsumme</td>
+                                    <td style="text-align: right;">${total.toFixed(2)} €</td>
+                                </tr>
+                                <tr>
+                                    <td>Davon MwSt.</td>
+                                    <td style="text-align: right;">${totalVat.toFixed(2)} €</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    `;
+                    this.elements.reportSummary.innerHTML = summaryHtml;
+                },
+
+                renderForm() {
+                    this.elements.mainForm.reset();
+                    this.clearFormErrors();
+                    this.state.tempReceipts = [];
+                    this.elements.receiptPreviewContainer.innerHTML = '';
+
+                    const isReportForm = this.state.formMode === 'new-report';
+                    
+                    this.elements.reportFields.classList.toggle('hidden', !isReportForm);
+                    this.elements.expenseFields.classList.toggle('hidden', isReportForm);
+                    
+                    if(this.state.formMode === 'new-report') {
+                        this.elements.headerTitle.textContent = 'Neue Abrechnung';
+                        this.elements.saveBtn.innerHTML = '<i data-feather="save"></i> Abrechnung anlegen';
+                        this.elements.billingMonthInput.value = new Date().toISOString().slice(0, 7);
+                    } else if (this.state.formMode === 'new-expense') {
+                        this.elements.headerTitle.textContent = 'Neuer Beleg';
+                        this.elements.saveBtn.innerHTML = '<i data-feather="save"></i> Beleg speichern';
+                        this.elements.expenseDateInput.value = new Date().toISOString().split('T')[0];
+                        this.updateCategoryFields();
+                    } else if (this.state.formMode === 'edit-expense') {
+                        this.elements.headerTitle.textContent = 'Beleg bearbeiten';
+                        this.elements.saveBtn.innerHTML = '<i data-feather="save"></i> Änderungen speichern';
+                        this.populateExpenseForm();
+                    }
+                    feather.replace();
+                },
+
+                updateCategoryFields() {
+                    const report = this.state.reports.find(r => r.id === this.state.currentReportId);
+                    if(!report) return;
+
+                    const reportType = report.reportType;
+                    const container = this.elements.categorySpecificFields;
+                    container.innerHTML = '';
+                    this.elements.expenseAmountInput.readOnly = false;
+                    
+                    this.elements.categorySelectGroup.classList.toggle('hidden', reportType === 'bewirtung');
+
+                    let fieldsHtml = '';
+                    
+                    if(reportType === 'bewirtung') {
+                        this.elements.expenseFormTitle.textContent = 'Neuer Bewirtungsbeleg';
+                        fieldsHtml = `
+                             <div class="form-group">
+                                <label for="bewirtung-rechnungsbetrag">Rechnungsbetrag (€)</label>
+                                <input type="number" id="bewirtung-rechnungsbetrag" class="form-control" placeholder="50.00" step="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="bewirtung-trinkgeld">Trinkgeld (€)</label>
+                                <input type="number" id="bewirtung-trinkgeld" class="form-control" placeholder="5.00" step="0.01">
+                            </div>
+                        `;
+                        this.elements.expenseDescriptionInput.placeholder = "Anlass und Teilnehmer";
+                        this.elements.expenseAmountInput.readOnly = true;
+                        
+                    } else { // 'reise'
+                         this.elements.expenseFormTitle.textContent = 'Neuer Beleg';
+                         this.elements.expenseDescriptionInput.placeholder = "z.B. Taxi zum Hotel";
+                         const category = this.elements.expenseCategorySelect.value;
+                         switch (category) {
+                            case 'fahrt':
+                                fieldsHtml = `
+                                    <div class="form-group">
+                                        <label for="fahrt-start">Startadresse</label>
+                                        <input type="text" id="fahrt-start" class="form-control" placeholder="z.B. Musterstraße 1, Berlin">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="fahrt-ziel">Zieladresse</label>
+                                        <input type="text" id="fahrt-ziel" class="form-control" placeholder="z.B. Zielallee 2, München">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="fahrt-km">Distanz (km)</label>
+                                        <input type="number" id="fahrt-km" class="form-control" placeholder="Gefahrene Kilometer">
+                                    </div>
+                                    <p class="text-color-light">Gesamtbetrag wird automatisch berechnet (0,30 €/km).</p>
+                                `;
+                                this.elements.expenseAmountInput.readOnly = true;
+                                break;
+                            case 'verpflegung':
+                                fieldsHtml = `
+                                    <div class="form-group">
+                                        <label for="verpflegung-start-datetime">Beginn der Abwesenheit</label>
+                                        <input type="datetime-local" id="verpflegung-start-datetime" class="form-control">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="verpflegung-end-datetime">Ende der Abwesenheit</label>
+                                        <input type="datetime-local" id="verpflegung-end-datetime" class="form-control">
+                                    </div>
+                                    <p class="text-color-light">Pauschale wird automatisch berechnet. Betrag kann manuell überschrieben werden (z.B. für Auslandsreisen).</p>
+                                `;
+                                this.elements.expenseAmountInput.readOnly = false;
+                                break;
+                            case 'geschäftsessen':
+                                this.elements.expenseDescriptionInput.placeholder = "Anlass und Teilnehmer";
+                                break;
+                        }
+                    }
+
+                    container.innerHTML = fieldsHtml;
+                    this.setupDynamicFieldListeners(reportType);
+                },
+
+                setupDynamicFieldListeners(reportType) {
+                    if (reportType === 'bewirtung') {
+                        const rechnungsbetragInput = document.getElementById('bewirtung-rechnungsbetrag');
+                        const trinkgeldInput = document.getElementById('bewirtung-trinkgeld');
+                        const calculateTotal = () => {
+                            const rechnungsbetrag = parseFloat(rechnungsbetragInput.value) || 0;
+                            const trinkgeld = parseFloat(trinkgeldInput.value) || 0;
+                            this.elements.expenseAmountInput.value = (rechnungsbetrag + trinkgeld).toFixed(2);
+                        };
+                        rechnungsbetragInput.addEventListener('input', calculateTotal);
+                        trinkgeldInput.addEventListener('input', calculateTotal);
+
+                    } else { // reise
+                        const category = this.elements.expenseCategorySelect.value;
+                         if(category === 'fahrt') {
+                            document.getElementById('fahrt-km').addEventListener('input', (e) => {
+                                const km = parseFloat(e.target.value) || 0;
+                                this.elements.expenseAmountInput.value = (km * this.constants.MILEAGE_RATE_CAR).toFixed(2);
+                            });
+                        }
+                        if(category === 'verpflegung') {
+                            const startInput = document.getElementById('verpflegung-start-datetime');
+                            const endInput = document.getElementById('verpflegung-end-datetime');
+                            const calculate = () => {
+                                if (startInput.value && endInput.value) {
+                                    const pauschale = this.calculatePerDiem(new Date(startInput.value), new Date(endInput.value));
+                                    this.elements.expenseAmountInput.value = pauschale.toFixed(2);
+                                }
+                            };
+                            startInput.addEventListener('change', calculate);
+                            endInput.addEventListener('change', calculate);
+                        }
+                    }
+                },
+                
+                populateExpenseForm() {
+                    const report = this.state.reports.find(r => r.id === this.state.currentReportId);
+                    if (!report) return;
+                    
+                    const expense = report.expenses.find(e => e.id === this.state.editExpenseId);
+                    if (!expense) return;
+                    
+                    this.updateCategoryFields(); // Build correct fields first
+
+                    this.elements.expenseDateInput.value = expense.date;
+                    this.elements.expenseDescriptionInput.value = expense.description;
+                    this.elements.expenseAmountInput.value = expense.amount;
+                    this.elements.expenseVatInput.value = expense.vatRate;
+                    this.elements.expenseProjectInput.value = expense.project || '';
+                    
+                    if (report.reportType === 'bewirtung') {
+                        document.getElementById('bewirtung-rechnungsbetrag').value = expense.details.invoiceAmount || '';
+                        document.getElementById('bewirtung-trinkgeld').value = expense.details.tip || '';
+                    } else {
+                        this.elements.expenseCategorySelect.value = expense.category;
+                        this.updateCategoryFields(); // Re-run to show correct fields
+                         if(expense.details) {
+                            switch(expense.category) {
+                                case 'fahrt':
+                                    document.getElementById('fahrt-start').value = expense.details.startAddress || '';
+                                    document.getElementById('fahrt-ziel').value = expense.details.endAddress || '';
+                                    document.getElementById('fahrt-km').value = expense.details.distance || '';
+                                    break;
+                                case 'verpflegung':
+                                    document.getElementById('verpflegung-start-datetime').value = expense.details.startDateTime || '';
+                                    document.getElementById('verpflegung-end-datetime').value = expense.details.endDateTime || '';
+                                    break;
+                            }
+                        }
+                    }
+                    
+                    // Populate receipts
+                    this.state.tempReceipts = expense.receiptImages || [];
+                    this.renderReceiptPreviews();
+                },
+                
+                // --- EVENT LISTENERS ---
+                setupEventListeners() {
+                    // Navigation
+                    this.elements.navItems.forEach(item => {
+                        item.addEventListener('click', () => {
+                             if (item.dataset.view) {
+                                this.switchView(item.dataset.view);
+                            }
+                        });
+                    });
+                     this.elements.settingsButton.addEventListener('click', () => this.switchView('settings-view'));
+
+                    // FAB to create new report
+                    this.elements.fab.addEventListener('click', () => {
+                        this.state.formMode = 'new-report';
+                        this.switchView('form-view');
+                    });
+                    
+                    // Form controls
+                    this.elements.cancelBtn.addEventListener('click', () => this.handleCancel());
+                    this.elements.mainForm.addEventListener('submit', (e) => this.handleFormSubmit(e));
+                    this.elements.expenseCategorySelect.addEventListener('change', () => this.updateCategoryFields());
+                    
+                    // Report Detail controls
+                    this.elements.backToReportsBtn.addEventListener('click', () => this.switchView('reports-view'));
+                    this.elements.addExpenseToReportBtn.addEventListener('click', () => {
+                        this.state.formMode = 'new-expense';
+                        this.switchView('form-view', this.state.currentReportId);
+                    });
+                    this.elements.deleteReportBtn.addEventListener('click', () => {
+                         this.showConfirmModal('Abrechnung löschen?', 'Möchten Sie diese Abrechnung und alle zugehörigen Belege wirklich unwiderruflich löschen?', () => this.deleteReport());
+                    });
+                    
+                    // Export
+                    this.elements.exportPdfBtn.addEventListener('click', () => this.exportToPDF());
+                    this.elements.exportExcelBtn.addEventListener('click', () => this.exportToXLSX());
+                    this.elements.printBtn.addEventListener('click', () => window.print());
+
+                    // Receipt handling
+                    this.elements.receiptUploadBtn.addEventListener('click', () => this.elements.receiptUploadInput.click());
+                    this.elements.receiptCameraBtn.addEventListener('click', () => this.elements.receiptCameraInput.click());
+                    this.elements.receiptUploadInput.addEventListener('change', (e) => this.handleImageFiles(e.target.files));
+                    this.elements.receiptCameraInput.addEventListener('change', (e) => this.handleImageFiles(e.target.files));
+
+                    // Settings
+                    this.elements.darkModeToggle.addEventListener('change', (e) => {
+                        this.state.darkMode = e.target.checked;
+                        this.saveState();
+                        this.render();
+                    });
+                    this.elements.backupBtn.addEventListener('click', () => this.backupData());
+                    this.elements.restoreBtn.addEventListener('click', () => this.elements.restoreInput.click());
+                    this.elements.restoreInput.addEventListener('change', (e) => this.restoreData(e));
+                    this.elements.deleteAllDataBtn.addEventListener('click', () => {
+                         this.showConfirmModal('Alle Daten löschen?', 'ACHTUNG! Dieser Vorgang kann nicht rückgängig gemacht werden. Alle Abrechnungen und Belege werden gelöscht.', () => this.deleteAllData());
+                    });
+                    
+                    // Modals
+                    this.elements.confirmModalClose.addEventListener('click', () => this.hideConfirmModal());
+                    this.elements.confirmModalCancel.addEventListener('click', () => this.hideConfirmModal());
+                    
+                    this.elements.monthlySummaryBtn.addEventListener('click', () => this.showMonthSelectModal());
+                    this.elements.monthSelectModalClose.addEventListener('click', () => this.hideMonthSelectModal());
+                    this.elements.monthSelectModalCancel.addEventListener('click', () => this.hideMonthSelectModal());
+                    this.elements.monthSelectModalGenerate.addEventListener('click', () => this.generateMonthlyReport());
+                },
+                
+                // --- ACTION HANDLERS ---
+                handleCancel() {
+                    if (this.state.formMode === 'new-report') {
+                        this.switchView('reports-view');
+                    } else { // 'new-expense' or 'edit-expense'
+                        this.switchView('report-detail-view', this.state.currentReportId);
+                    }
+                },
+                
+                handleFormSubmit(e) {
+                    e.preventDefault();
+                    this.clearFormErrors();
+
+                    if(this.state.formMode === 'new-report') {
+                        this.saveNewReport();
+                    } else if (this.state.formMode === 'new-expense') {
+                        this.saveNewExpense();
+                    } else if (this.state.formMode === 'edit-expense') {
+                        this.saveUpdatedExpense();
+                    }
+                },
+                
+                saveNewReport() {
+                    const reportName = this.elements.reportNameInput.value.trim();
+                    const employeeName = this.elements.employeeNameInput.value.trim();
+                    const billingMonth = this.elements.billingMonthInput.value;
+
+                    if (!reportName) {
+                        this.showFormError(this.elements.reportNameInput, 'Bitte geben Sie einen Namen an.');
+                        return;
+                    }
+                    if (!employeeName) {
+                        this.showFormError(this.elements.employeeNameInput, 'Bitte geben Sie einen Namen an.');
+                        return;
+                    }
+                     if (!billingMonth) {
+                        this.showFormError(this.elements.billingMonthInput, 'Bitte wählen Sie einen Monat aus.');
+                        return;
+                    }
+
+                    const newReport = {
+                        id: crypto.randomUUID(),
+                        reportType: this.elements.reportTypeSelect.value,
+                        name: reportName,
+                        employeeName: employeeName,
+                        billingMonth: billingMonth,
+                        createdAt: new Date().toISOString(),
+                        expenses: []
+                    };
+                    this.state.reports.push(newReport);
+                    this.saveState();
+                    this.switchView('reports-view');
+                },
+                
+                saveNewExpense() {
+                    const newExpense = this.createExpenseObjectFromForm();
+                    if(!newExpense) return;
+                    
+                    const report = this.state.reports.find(r => r.id === this.state.currentReportId);
+                    if(report) {
+                        report.expenses.push(newExpense);
+                        this.saveState();
+                        this.switchView('report-detail-view', report.id);
+                    }
+                },
+
+                saveUpdatedExpense() {
+                    const updatedExpense = this.createExpenseObjectFromForm();
+                    if(!updatedExpense) return;
+
+                    const report = this.state.reports.find(r => r.id === this.state.currentReportId);
+                    if(report) {
+                        const expenseIndex = report.expenses.findIndex(e => e.id === this.state.editExpenseId);
+                        if (expenseIndex !== -1) {
+                            report.expenses[expenseIndex] = updatedExpense;
+                            this.saveState();
+                            this.switchView('report-detail-view', report.id);
+                        }
+                    }
+                },
+                
+                createExpenseObjectFromForm() {
+                    const report = this.state.reports.find(r => r.id === this.state.currentReportId);
+                    if (!report) return null;
+                    
+                    const amount = parseFloat(this.elements.expenseAmountInput.value);
+                    if (isNaN(amount) || amount < 0) {
+                        this.showFormError(this.elements.expenseAmountInput, 'Bitte geben Sie einen gültigen Gesamtbetrag ein.');
+                        return null;
+                    }
+                    if (!this.elements.expenseDateInput.value) {
+                         this.showFormError(this.elements.expenseDateInput, 'Bitte geben Sie ein Datum an.');
+                         return null;
+                    }
+                     if (!this.elements.expenseDescriptionInput.value.trim()) {
+                         this.showFormError(this.elements.expenseDescriptionInput, 'Bitte geben Sie eine Beschreibung an.');
+                         return null;
+                    }
+                    
+                    const expenseId = this.state.formMode === 'edit-expense' ? this.state.editExpenseId : crypto.randomUUID();
+                    let category;
+                    let details = {};
+
+                    if (report.reportType === 'bewirtung') {
+                        category = 'bewirtung';
+                        const rechnungsbetrag = parseFloat(document.getElementById('bewirtung-rechnungsbetrag').value);
+                        if(isNaN(rechnungsbetrag)) {
+                            this.showFormError(document.getElementById('bewirtung-rechnungsbetrag'), 'Bitte Rechnungsbetrag angeben.');
+                            return null;
+                        }
+                        details = {
+                           invoiceAmount: rechnungsbetrag,
+                           tip: parseFloat(document.getElementById('bewirtung-trinkgeld').value) || 0
+                        };
+                    } else { // 'reise'
+                        category = this.elements.expenseCategorySelect.value;
+                        switch(category) {
+                            case 'fahrt':
+                                details = {
+                                    startAddress: document.getElementById('fahrt-start').value,
+                                    endAddress: document.getElementById('fahrt-ziel').value,
+                                    distance: document.getElementById('fahrt-km').value,
+                                };
+                                break;
+                            case 'verpflegung':
+                                details = {
+                                    startDateTime: document.getElementById('verpflegung-start-datetime').value,
+                                    endDateTime: document.getElementById('verpflegung-end-datetime').value,
+                                };
+                                break;
+                        }
+                    }
+                    
+                    return {
+                        id: expenseId,
+                        date: this.elements.expenseDateInput.value,
+                        category: category,
+                        description: this.elements.expenseDescriptionInput.value.trim(),
+                        amount: amount,
+                        vatRate: parseFloat(this.elements.expenseVatInput.value) || 0,
+                        project: this.elements.expenseProjectInput.value.trim(),
+                        receiptImages: this.state.tempReceipts,
+                        details: details
+                    };
+                },
+
+                deleteReport() {
+                    this.state.reports = this.state.reports.filter(r => r.id !== this.state.currentReportId);
+                    this.saveState();
+                    this.switchView('reports-view');
+                },
+                
+                startEditExpense(expenseId) {
+                    this.state.formMode = 'edit-expense';
+                    this.state.editExpenseId = expenseId;
+                    this.switchView('form-view', this.state.currentReportId);
+                },
+
+                deleteExpense(expenseId) {
+                     const report = this.state.reports.find(r => r.id === this.state.currentReportId);
+                     if (report) {
+                         report.expenses = report.expenses.filter(e => e.id !== expenseId);
+                         this.saveState();
+                         this.render(); // Re-render the detail view
+                     }
+                },
+                
+                deleteAllData() {
+                    this.state.reports = [];
+                    this.saveState();
+                    this.render();
+                    this.showToast('Alle Daten wurden gelöscht.');
+                },
+
+                // --- RECEIPT/IMAGE HANDLING ---
+                handleImageFiles(files) {
+                    if(!files || files.length === 0) return;
+                    
+                    Array.from(files).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.compressImage(e.target.result, (compressedDataUrl) => {
+                                this.state.tempReceipts.push(compressedDataUrl);
+                                this.renderReceiptPreviews();
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                    
+                    this.elements.receiptUploadInput.value = '';
+                    this.elements.receiptCameraInput.value = '';
+                },
+
+                compressImage(src, callback) {
+                    const img = new Image();
+                    img.src = src;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        const MAX_WIDTH = 1024;
+                        const MAX_HEIGHT = 1024;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        callback(dataUrl);
+                    };
+                },
+                
+                renderReceiptPreviews() {
+                    const container = this.elements.receiptPreviewContainer;
+                    container.innerHTML = '';
+                    this.state.tempReceipts.forEach((imgData, index) => {
+                        const item = document.createElement('div');
+                        item.className = 'receipt-preview-item';
+                        item.innerHTML = `
+                            <img src="${imgData}" alt="Beleg-Vorschau ${index + 1}">
+                            <button type="button" class="remove-receipt-btn" data-index="${index}">&times;</button>
+                        `;
+                        container.appendChild(item);
+                    });
+                    
+                    container.querySelectorAll('.remove-receipt-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const indexToRemove = parseInt(e.target.dataset.index, 10);
+                            this.state.tempReceipts.splice(indexToRemove, 1);
+                            this.renderReceiptPreviews();
+                        });
+                    });
+                },
+
+
+                // --- CALCULATIONS & HELPERS ---
+                getReportDateRange(report) {
+                    if (report.expenses.length === 0) {
+                        return new Date(report.createdAt).toLocaleDateString('de-DE');
+                    }
+                    const dates = report.expenses.map(e => new Date(e.date));
+                    const minDate = new Date(Math.min.apply(null, dates));
+                    const maxDate = new Date(Math.max.apply(null, dates));
+                    if (minDate.getTime() === maxDate.getTime()) {
+                        return minDate.toLocaleDateString('de-DE');
+                    }
+                    return `${minDate.toLocaleDateString('de-DE')} - ${maxDate.toLocaleDateString('de-DE')}`;
+                },
+                
+                calculateReportTotal(report) {
+                    return report.expenses.reduce((sum, e) => sum + e.amount, 0);
+                },
+
+                calculateReportVat(report) {
+                    return report.expenses.reduce((sum, e) => {
+                        const invoiceAmount = e.details?.invoiceAmount || e.amount;
+                        const vatAmount = invoiceAmount * (e.vatRate / (100 + e.vatRate));
+                        return sum + (vatAmount || 0);
+                    }, 0);
+                },
+                
+                calculateSummaryByCategory(report) {
+                    const summary = {};
+                    report.expenses.forEach(e => {
+                        const category = e.category;
+                        summary[category] = (summary[category] || 0) + e.amount;
+                    });
+                    return summary;
+                },
+
+                getIconForCategory(category) {
+                    const icons = {
+                        fahrt: 'truck',
+                        übernachtung: 'home',
+                        verpflegung: 'coffee',
+                        geschäftsessen: 'users',
+                        bewirtung: 'users',
+                        sonstiges: 'shopping-bag'
+                    };
+                    return icons[category] || 'dollar-sign';
+                },
+
+                getCategoryLabel(category) {
+                     const labels = {
+                        fahrt: 'Fahrtkosten',
+                        übernachtung: 'Übernachtung',
+                        verpflegung: 'Verpflegung',
+                        geschäftsessen: 'Geschäftsessen',
+                        bewirtung: 'Bewirtung',
+                        sonstiges: 'Sonstiges'
+                    };
+                    return labels[category] || category;
+                },
+
+                calculatePerDiem(start, end) {
+                    if (!(start instanceof Date && !isNaN(start)) || !(end instanceof Date && !isNaN(end))) {
+                        return 0;
+                    }
+
+                    if (end < start) return 0;
+
+                    const diffHours = (end - start) / 1000 / 60 / 60;
+                    const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                    const endDate = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+                    const diffDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+
+                    if (diffDays < 1) {
+                        return diffHours >= 8 ? this.constants.PER_DIEM_GERMANY_GT_8_HOURS : 0;
+                    }
+                    
+                    let totalPauschale = 0;
+                    totalPauschale += this.constants.PER_DIEM_GERMANY_ARRIVAL_DEPARTURE; // Arrival day
+                    if (diffDays >= 1) {
+                         totalPauschale += this.constants.PER_DIEM_GERMANY_ARRIVAL_DEPARTURE; // Departure day
+                    }
+                    if (diffDays > 1) {
+                        const fullDays = diffDays - 1;
+                        totalPauschale += fullDays * this.constants.PER_DIEM_GERMANY_FULL_DAY;
+                    }
+                    return totalPauschale;
+                },
+
+
+                // --- DATA EXPORT & SETTINGS ---
+                backupData() {
+                    const dataStr = JSON.stringify(this.state.reports, null, 2);
+                    const dataBlob = new Blob([dataStr], {type: "application/json"});
+                    const url = URL.createObjectURL(dataBlob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `kosten-app-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                },
+                
+                restoreData(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const restoredData = JSON.parse(e.target.result);
+                            if (Array.isArray(restoredData) && (restoredData.length === 0 || restoredData[0].id)) {
+                                this.showConfirmModal('Daten wiederherstellen?', 'Möchten Sie die aktuellen Daten wirklich mit dem Inhalt der Backup-Datei überschreiben?', () => {
+                                    this.state.reports = restoredData;
+                                    this.saveState();
+                                    this.switchView('reports-view');
+                                    this.render();
+                                    this.showToast('Daten erfolgreich wiederhergestellt.');
+                                });
+                            } else {
+                                this.showToast('Die Datei scheint kein gültiges Backup zu sein.');
+                            }
+                        } catch (err) {
+                            this.showToast('Fehler beim Lesen der Backup-Datei.');
+                            console.error(err);
+                        } finally {
+                             event.target.value = null;
+                        }
+                    };
+                    reader.readAsText(file);
+                },
+
+                // --- MODAL, TOAST AND ERRORS ---
+                showToast(message, duration = 3000) {
+                    this.elements.toast.textContent = message;
+                    this.elements.toast.classList.add('show');
+                    setTimeout(() => {
+                        this.elements.toast.classList.remove('show');
+                    }, duration);
+                },
+
+                showFormError(inputElement, message) {
+                    this.clearFormErrors();
+                    const formGroup = inputElement.closest('.form-group');
+                    if (formGroup) {
+                        const errorElement = document.createElement('p');
+                        errorElement.className = 'form-error-message';
+                        errorElement.textContent = message;
+                        formGroup.appendChild(errorElement);
+                        inputElement.style.borderColor = 'var(--danger-color)';
+                        inputElement.focus();
+                    }
+                },
+
+                clearFormErrors() {
+                    document.querySelectorAll('.form-error-message').forEach(el => el.remove());
+                    document.querySelectorAll('.form-control').forEach(el => {
+                        el.style.borderColor = ''; // Reset to default
+                    });
+                },
+
+                showConfirmModal(title, text, onConfirm) {
+                    this.elements.confirmModalTitle.textContent = title;
+                    this.elements.confirmModalText.textContent = text;
+                    this.elements.confirmModal.classList.add('active');
+                    const oldConfirmBtn = this.elements.confirmModalConfirm;
+                    const newConfirmBtn = oldConfirmBtn.cloneNode(true);
+                    oldConfirmBtn.parentNode.replaceChild(newConfirmBtn, oldConfirmBtn);
+                    this.elements.confirmModalConfirm = newConfirmBtn;
+                    newConfirmBtn.addEventListener('click', () => {
+                        onConfirm();
+                        this.hideConfirmModal();
+                    }, { once: true });
+                },
+
+                hideConfirmModal() {
+                     this.elements.confirmModal.classList.remove('active');
+                },
+
+                showMonthSelectModal() {
+                    this.elements.summaryMonthInput.value = new Date().toISOString().slice(0, 7);
+                    this.elements.monthSelectModal.classList.add('active');
+                },
+                
+                hideMonthSelectModal() {
+                    this.elements.monthSelectModal.classList.remove('active');
+                },
+
+                // --- EXPORT FUNCTIONS ---
+                generateMonthlyReport() {
+                    const month = this.elements.summaryMonthInput.value;
+                    if(!month) {
+                        this.showToast('Bitte wählen Sie einen Monat aus.');
+                        return;
+                    }
+                    
+                    const monthlyReports = this.state.reports.filter(r => r.billingMonth === month);
+                    if(monthlyReports.length === 0) {
+                        this.showToast('Für diesen Monat wurden keine Abrechnungen gefunden.');
+                        return;
+                    }
+                    
+                    let employeeName = monthlyReports[0].employeeName;
+                    const travelExpenses = [];
+                    const hospitalityExpenses = [];
+
+                    monthlyReports.forEach(report => {
+                        if (report.reportType === 'reise') {
+                            travelExpenses.push(...report.expenses);
+                        } else {
+                            hospitalityExpenses.push(...report.expenses);
+                        }
+                    });
+
+                    this.exportMonthlySummaryToPDF(month, employeeName, travelExpenses, hospitalityExpenses);
+                    this.hideMonthSelectModal();
+                },
+
+                exportMonthlySummaryToPDF(month, employeeName, travelExpenses, hospitalityExpenses) {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    const monthString = new Date(month + '-02').toLocaleString('de-DE', { month: 'long', year: 'numeric' });
+                    
+                    doc.setFontSize(18);
+                    doc.text(`Monatliche Gesamtabrechnung: ${monthString}`, 14, 22);
+                    doc.setFontSize(11);
+                    doc.setTextColor(100);
+                    doc.text(`Mitarbeiter: ${employeeName}`, 14, 30);
+                    
+                    let finalY = 35;
+                    let totalTravel = 0;
+                    let totalHospitality = 0;
+
+                    if (travelExpenses.length > 0) {
+                        doc.setFontSize(14);
+                        doc.text('Reisekosten', 14, finalY + 10);
+                        const head = [['Datum', 'Kategorie', 'Beschreibung', 'Betrag (€)']];
+                        const body = travelExpenses.map(e => {
+                            totalTravel += e.amount;
+                             let description = e.description;
+                            if (e.category === 'fahrt' && e.details) {
+                                description += `\n(${e.details.startAddress || ''} -> ${e.details.endAddress || ''} | ${e.details.distance || ''} km)`;
+                            }
+                            if (e.category === 'verpflegung' && e.details && e.details.startDateTime) {
+                                const start = new Date(e.details.startDateTime).toLocaleString('de-DE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+                                const end = new Date(e.details.endDateTime).toLocaleString('de-DE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+                                description += `\n(Dauer: ${start} - ${end})`;
+                            }
+                            return [
+                                new Date(e.date).toLocaleDateString('de-DE'),
+                                this.getCategoryLabel(e.category),
+                                description,
+                                { content: e.amount.toFixed(2), styles: { halign: 'right' } }
+                            ];
+                        });
+                        doc.autoTable({ head, body, startY: finalY + 15, theme: 'grid' });
+                        finalY = doc.lastAutoTable.finalY;
+                    }
+
+                    if (hospitalityExpenses.length > 0) {
+                        doc.setFontSize(14);
+                        doc.text('Bewirtungskosten', 14, finalY + 15);
+                        const head = [['Datum', 'Anlass/Teilnehmer', 'Rechnungsbetrag', 'Trinkgeld', 'Gesamt (€)']];
+                        const body = hospitalityExpenses.map(e => {
+                             totalHospitality += e.amount;
+                             return [
+                                new Date(e.date).toLocaleDateString('de-DE'),
+                                e.description,
+                                { content: (e.details.invoiceAmount || 0).toFixed(2), styles: { halign: 'right' } },
+                                { content: (e.details.tip || 0).toFixed(2), styles: { halign: 'right' } },
+                                { content: e.amount.toFixed(2), styles: { halign: 'right' } }
+                            ];
+                        });
+                        doc.autoTable({ head, body, startY: finalY + 20, theme: 'grid' });
+                        finalY = doc.lastAutoTable.finalY;
+                    }
+                    
+                    finalY += 15;
+                    const grandTotal = totalTravel + totalHospitality;
+
+                    doc.setFontSize(12);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Gesamtkosten des Monats:', 14, finalY);
+                    doc.text(`${grandTotal.toFixed(2)} €`, 200, finalY, { align: 'right' });
+
+                    // --- Add receipts ---
+                    const allExpensesWithReceipts = [...travelExpenses, ...hospitalityExpenses].filter(
+                        e => e.receiptImages && e.receiptImages.length > 0
+                    );
+
+                    if (allExpensesWithReceipts.length > 0) {
+                        doc.addPage();
+                        finalY = 20;
+                        doc.setFontSize(16);
+                        doc.text('Belege', 14, finalY);
+                        finalY += 10;
+
+                        allExpensesWithReceipts.forEach(expense => {
+                            expense.receiptImages.forEach(imgData => {
+                                if (finalY > doc.internal.pageSize.height - 80) { // Check space for image
+                                    doc.addPage();
+                                    finalY = 20;
+                                }
+                                try {
+                                    doc.setFontSize(9);
+                                    doc.setTextColor(150);
+                                    const caption = `${new Date(expense.date).toLocaleDateString('de-DE')}: ${expense.description}`;
+                                    doc.text(caption, 14, finalY - 2);
+                                    doc.addImage(imgData, 'JPEG', 14, finalY, 80, 0); // auto-height
+                                    finalY += 70; // Approximation for image height + margin
+                                } catch(e) {
+                                    console.error("Fehler beim Hinzufügen des Bildes zum PDF:", e);
+                                    doc.text('Bild konnte nicht geladen werden.', 14, finalY);
+                                    finalY += 10;
+                                }
+                            });
+                        });
+                    }
+                    
+                    doc.save(`Monatsabrechnung_${month}_${employeeName.replace(/\s/g, '_')}.pdf`);
+                },
+
+
+                exportToPDF() {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    const report = this.state.reports.find(r => r.id === this.state.currentReportId);
+                    if (!report) return;
+
+                    const reportTypeLabel = report.reportType === 'reise' ? 'Reisekostenabrechnung' : 'Bewirtungskostenabrechnung';
+                    
+                    doc.setFontSize(18);
+                    doc.text(`${reportTypeLabel}: ${report.name}`, 14, 22);
+                    doc.setFontSize(11);
+                    doc.setTextColor(100);
+                    doc.text(`Mitarbeiter: ${report.employeeName}`, 14, 30);
+                    doc.text(`Abrechnungsmonat: ${new Date(report.billingMonth + '-02').toLocaleString('de-DE', { month: 'long', year: 'numeric' })}`, 14, 36);
+
+                    let head, body, finalY;
+                    
+                    if(report.reportType === 'reise') {
+                        head = [['Datum', 'Kategorie', 'Beschreibung', 'Betrag (€)']];
+                        body = report.expenses.map(e => [
+                            new Date(e.date).toLocaleDateString('de-DE'),
+                            this.getCategoryLabel(e.category),
+                            e.description,
+                            { content: e.amount.toFixed(2), styles: { halign: 'right' } }
+                        ]);
+                    } else { // bewirtung
+                         head = [['Datum', 'Anlass/Teilnehmer', 'Rechnungsbetrag', 'Trinkgeld', 'Gesamt (€)']];
+                         body = report.expenses.map(e => [
+                            new Date(e.date).toLocaleDateString('de-DE'),
+                            e.description,
+                            { content: (e.details.invoiceAmount || 0).toFixed(2), styles: { halign: 'right' } },
+                            { content: (e.details.tip || 0).toFixed(2), styles: { halign: 'right' } },
+                            { content: e.amount.toFixed(2), styles: { halign: 'right' } }
+                        ]);
+                    }
+
+                    doc.autoTable({
+                        head: head,
+                        body: body,
+                        startY: 45,
+                        theme: 'grid'
+                    });
+                    
+                    finalY = doc.lastAutoTable.finalY + 10;
+                    const total = this.calculateReportTotal(report);
+                    const totalVat = this.calculateReportVat(report);
+
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Gesamtsumme:', 14, finalY);
+                    doc.text(`${total.toFixed(2)} €`, 200, finalY, { align: 'right' });
+                    
+                    doc.setFont(undefined, 'normal');
+                    doc.text('Davon enthaltene MwSt.:', 14, finalY + 6);
+                    doc.text(`${totalVat.toFixed(2)} €`, 200, finalY + 6, { align: 'right' });
+
+                    // --- Add receipts for single report ---
+                    const expensesWithReceipts = report.expenses.filter(e => e.receiptImages && e.receiptImages.length > 0);
+                    if (expensesWithReceipts.length > 0) {
+                        doc.addPage();
+                        finalY = 20;
+                        doc.setFontSize(16);
+                        doc.text('Belege', 14, finalY);
+                        finalY += 10;
+
+                        expensesWithReceipts.forEach(expense => {
+                            expense.receiptImages.forEach(imgData => {
+                                if (finalY > doc.internal.pageSize.height - 80) {
+                                    doc.addPage();
+                                    finalY = 20;
+                                }
+                                try {
+                                    doc.setFontSize(9);
+                                    doc.setTextColor(150);
+                                    doc.text(`${new Date(expense.date).toLocaleDateString('de-DE')}: ${expense.description}`, 14, finalY - 2);
+                                    doc.addImage(imgData, 'JPEG', 14, finalY, 80, 0);
+                                    finalY += 70;
+                                } catch(e) {
+                                    console.error("Fehler beim Hinzufügen des Bildes zum PDF:", e);
+                                    doc.text('Bild konnte nicht geladen werden.', 14, finalY);
+                                    finalY += 10;
+                                }
+                            });
+                        });
+                    }
+
+                    doc.save(`${reportTypeLabel}_${report.name.replace(/\s/g, '_')}.pdf`);
+                },
+
+                exportToXLSX() {
+                    const report = this.state.reports.find(r => r.id === this.state.currentReportId);
+                    if (!report) return;
+
+                    const reportTypeLabel = report.reportType === 'reise' ? 'Reisekosten' : 'Bewirtung';
+                    
+                    let data;
+                    if(report.reportType === 'reise') {
+                        data = report.expenses.map(e => ({
+                            'Datum': new Date(e.date).toLocaleDateString('de-DE'),
+                            'Kategorie': this.getCategoryLabel(e.category),
+                            'Beschreibung': e.description,
+                            'Betrag (Brutto)': e.amount,
+                            'MwSt. (%)': e.vatRate,
+                            'MwSt. Betrag': e.amount * (e.vatRate / (100 + e.vatRate)),
+                            'Projekt': e.project || '',
+                        }));
+                    } else { // bewirtung
+                         data = report.expenses.map(e => ({
+                            'Datum': new Date(e.date).toLocaleDateString('de-DE'),
+                            'Anlass/Teilnehmer': e.description,
+                            'Rechnungsbetrag': e.details.invoiceAmount || 0,
+                            'Trinkgeld': e.details.tip || 0,
+                            'Gesamtbetrag': e.amount,
+                            'MwSt. (%)': e.vatRate,
+                            'MwSt. Betrag': (e.details.invoiceAmount || 0) * (e.vatRate / (100 + e.vatRate)),
+                            'Projekt': e.project || '',
+                        }));
+                    }
+                    
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.json_to_sheet(data, {origin: "A6"});
+
+                    XLSX.utils.sheet_add_aoa(ws, [
+                        ['Abrechnung:', report.name],
+                        ['Typ:', reportTypeLabel],
+                        ['Mitarbeiter:', report.employeeName],
+                        ['Monat:', report.billingMonth],
+                    ], {origin: "A1"});
+
+                    XLSX.utils.book_append_sheet(wb, ws, "Abrechnung");
+                    
+                    XLSX.writeFile(wb, `${reportTypeLabel}_${report.name.replace(/\s/g, '_')}.xlsx`);
+                },
+
+            };
+
+            app.init();
+
+        });
+    </script>
+</body>
+</html>
