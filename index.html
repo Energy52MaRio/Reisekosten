@@ -358,24 +358,24 @@
             font-size: 1.1rem;
         }
         
-        /* Receipt Preview */
-        .receipt-preview-container {
+        /* Receipt & Logo Preview */
+        .image-preview-container {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             margin-top: 10px;
         }
-        .receipt-preview-item {
+        .image-preview-item {
             position: relative;
         }
-        .receipt-preview-item img {
+        .image-preview-item img {
             width: 80px;
             height: 80px;
             object-fit: cover;
             border-radius: 8px;
             border: 1px solid var(--border-color);
         }
-        .remove-receipt-btn {
+        .remove-image-btn {
             position: absolute;
             top: -5px;
             right: -5px;
@@ -579,6 +579,18 @@
         <main>
             <!-- View: List of all reports -->
             <div id="reports-view" class="view active">
+                <div id="master-data-display" class="card hidden">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <img id="main-view-employee-pic" src="" alt="Mitarbeiterbild" style="height: 50px; width: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color);">
+                            <div>
+                                <h2 id="main-view-employee-name" style="font-size: 1.3rem;">Mitarbeitername</h2>
+                                <p id="main-view-company-name" class="text-color-light">Firmenname</p>
+                            </div>
+                        </div>
+                        <img id="main-view-company-logo" src="" alt="Firmenlogo" style="height: 50px; max-width: 100px; object-fit: contain;">
+                    </div>
+                </div>
                 <div class="card">
                     <button class="btn btn-full-width" id="monthly-summary-btn"><i data-feather="calendar"></i> Monatliche Gesamtabrechnung</button>
                 </div>
@@ -703,7 +715,7 @@
                                     <button type="button" class="btn btn-secondary" id="receipt-upload-btn"><i data-feather="upload"></i> Hochladen</button>
                                     <button type="button" class="btn btn-secondary" id="receipt-camera-btn"><i data-feather="camera"></i> Scannen</button>
                                 </div>
-                                <div id="receipt-preview-container" class="receipt-preview-container"></div>
+                                <div id="receipt-preview-container" class="image-preview-container"></div>
                             </div>
 
                         </div>
@@ -720,7 +732,37 @@
             <div id="settings-view" class="view">
                 <div class="card">
                     <div class="card-header">
-                        <h2>Einstellungen</h2>
+                        <h2>Stammdaten</h2>
+                    </div>
+                    <form id="master-data-form">
+                        <div class="form-group">
+                            <label for="master-company-name">Firma</label>
+                            <input type="text" id="master-company-name" class="form-control" placeholder="Name Ihrer Firma">
+                        </div>
+                         <div class="form-group">
+                            <label for="master-company-logo">Firmenlogo</label>
+                            <input type="file" id="master-company-logo-input" class="hidden" accept="image/*">
+                            <button type="button" class="btn btn-secondary" id="master-company-logo-btn">Logo auswählen</button>
+                            <div id="master-company-logo-preview" class="image-preview-container mt-20"></div>
+                        </div>
+                        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 20px 0;">
+                        <div class="form-group">
+                            <label for="master-employee-name">Mitarbeiter</label>
+                            <input type="text" id="master-employee-name" class="form-control" placeholder="Ihr Name">
+                        </div>
+                        <div class="form-group">
+                            <label for="master-employee-pic">Mitarbeiterbild (optional)</label>
+                            <input type="file" id="master-employee-pic-input" class="hidden" accept="image/*">
+                            <button type="button" class="btn btn-secondary" id="master-employee-pic-btn">Bild auswählen</button>
+                            <div id="master-employee-pic-preview" class="image-preview-container mt-20"></div>
+                        </div>
+                        <button type="submit" class="btn btn-full-width mt-20">Stammdaten speichern</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Darstellung</h2>
                     </div>
                     <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
                         <label for="dark-mode-toggle">Dark Mode</label>
@@ -808,6 +850,12 @@
             const app = {
                 state: {
                     reports: [],
+                    masterData: {
+                        companyName: '',
+                        companyLogo: '',
+                        employeeName: '',
+                        employeePic: ''
+                    },
                     currentView: 'reports-view',
                     currentReportId: null,
                     formMode: null, // 'new-report', 'edit-report', 'new-expense', 'edit-expense'
@@ -829,6 +877,11 @@
                     formView: document.getElementById('form-view'),
                     settingsView: document.getElementById('settings-view'),
                     // Report List
+                    masterDataDisplay: document.getElementById('master-data-display'),
+                    mainViewCompanyName: document.getElementById('main-view-company-name'),
+                    mainViewEmployeeName: document.getElementById('main-view-employee-name'),
+                    mainViewCompanyLogo: document.getElementById('main-view-company-logo'),
+                    mainViewEmployeePic: document.getElementById('main-view-employee-pic'),
                     monthlySummaryBtn: document.getElementById('monthly-summary-btn'),
                     reportList: document.getElementById('report-list'),
                     noReportsMessage: document.getElementById('no-reports-message'),
@@ -871,6 +924,15 @@
                     saveBtn: document.getElementById('save-btn'),
                     cancelBtn: document.getElementById('cancel-btn'),
                     // Settings
+                    masterDataForm: document.getElementById('master-data-form'),
+                    masterCompanyNameInput: document.getElementById('master-company-name'),
+                    masterCompanyLogoBtn: document.getElementById('master-company-logo-btn'),
+                    masterCompanyLogoInput: document.getElementById('master-company-logo-input'),
+                    masterCompanyLogoPreview: document.getElementById('master-company-logo-preview'),
+                    masterEmployeeNameInput: document.getElementById('master-employee-name'),
+                    masterEmployeePicBtn: document.getElementById('master-employee-pic-btn'),
+                    masterEmployeePicInput: document.getElementById('master-employee-pic-input'),
+                    masterEmployeePicPreview: document.getElementById('master-employee-pic-preview'),
                     darkModeToggle: document.getElementById('dark-mode-toggle'),
                     backupBtn: document.getElementById('backup-btn'),
                     restoreBtn: document.getElementById('restore-btn-action'),
@@ -912,12 +974,17 @@
                     if (savedReports) {
                         this.state.reports = JSON.parse(savedReports);
                     }
+                    const savedMasterData = localStorage.getItem('kosten-app-masterdata');
+                    if (savedMasterData) {
+                        this.state.masterData = JSON.parse(savedMasterData);
+                    }
                     const savedDarkMode = localStorage.getItem('kosten-app-darkmode');
                     this.state.darkMode = savedDarkMode === 'true';
                 },
                 
                 saveState() {
                     localStorage.setItem('kosten-app-reports', JSON.stringify(this.state.reports));
+                    localStorage.setItem('kosten-app-masterdata', JSON.stringify(this.state.masterData));
                     localStorage.setItem('kosten-app-darkmode', this.state.darkMode);
                 },
 
@@ -960,6 +1027,7 @@
                             this.elements.headerTitle.textContent = 'Einstellungen';
                             this.elements.settingsButton.style.display = 'none';
                             this.elements.fab.style.display = 'none';
+                            this.renderSettings();
                             break;
                     }
                     feather.replace();
@@ -975,6 +1043,31 @@
                 // --- RENDERING FUNCTIONS ---
                 
                 renderReportList() {
+                    // Render master data display on main page
+                    const { masterData } = this.state;
+                    if (masterData.companyName || masterData.employeeName || masterData.companyLogo || masterData.employeePic) {
+                        this.elements.masterDataDisplay.classList.remove('hidden');
+                        this.elements.mainViewCompanyName.textContent = masterData.companyName || 'Keine Firma angegeben';
+                        this.elements.mainViewEmployeeName.textContent = masterData.employeeName || 'Kein Mitarbeiter angegeben';
+                        
+                        if (masterData.companyLogo) {
+                            this.elements.mainViewCompanyLogo.src = masterData.companyLogo;
+                            this.elements.mainViewCompanyLogo.style.display = 'block';
+                        } else {
+                            this.elements.mainViewCompanyLogo.style.display = 'none';
+                        }
+                        
+                        if (masterData.employeePic) {
+                            this.elements.mainViewEmployeePic.src = masterData.employeePic;
+                            this.elements.mainViewEmployeePic.style.display = 'block';
+                        } else {
+                            this.elements.mainViewEmployeePic.style.display = 'none';
+                        }
+                    } else {
+                        this.elements.masterDataDisplay.classList.add('hidden');
+                    }
+                    
+                    // Render report list
                     this.elements.reportList.innerHTML = '';
                     if (this.state.reports.length === 0) {
                         this.elements.noReportsMessage.classList.remove('hidden');
@@ -1111,6 +1204,10 @@
                         this.elements.headerTitle.textContent = 'Neue Abrechnung';
                         this.elements.saveBtn.innerHTML = '<i data-feather="save"></i> Abrechnung anlegen';
                         this.elements.billingMonthInput.value = new Date().toISOString().slice(0, 7);
+                        // Pre-fill employee name from master data
+                        if(this.state.masterData.employeeName) {
+                            this.elements.employeeNameInput.value = this.state.masterData.employeeName;
+                        }
                     } else if (this.state.formMode === 'new-expense') {
                         this.elements.headerTitle.textContent = 'Neuer Beleg';
                         this.elements.saveBtn.innerHTML = '<i data-feather="save"></i> Beleg speichern';
@@ -1122,6 +1219,33 @@
                         this.populateExpenseForm();
                     }
                     feather.replace();
+                },
+
+                renderSettings() {
+                    const { masterData } = this.state;
+                    this.elements.masterCompanyNameInput.value = masterData.companyName || '';
+                    this.elements.masterEmployeeNameInput.value = masterData.employeeName || '';
+                    
+                    this.renderImagePreview(this.elements.masterCompanyLogoPreview, masterData.companyLogo, 'companyLogo');
+                    this.renderImagePreview(this.elements.masterEmployeePicPreview, masterData.employeePic, 'employeePic');
+                },
+
+                renderImagePreview(container, imageData, key) {
+                    container.innerHTML = '';
+                    if(imageData) {
+                        const item = document.createElement('div');
+                        item.className = 'image-preview-item';
+                        item.innerHTML = `
+                            <img src="${imageData}" alt="Vorschau">
+                            <button type="button" class="remove-image-btn" data-key="${key}">&times;</button>
+                        `;
+                        container.appendChild(item);
+                        container.querySelector('.remove-image-btn').addEventListener('click', (e) => {
+                            this.state.masterData[e.target.dataset.key] = '';
+                            this.saveState();
+                            this.renderSettings();
+                        });
+                    }
                 },
 
                 updateCategoryFields() {
@@ -1320,6 +1444,12 @@
                     this.elements.receiptCameraInput.addEventListener('change', (e) => this.handleImageFiles(e.target.files));
 
                     // Settings
+                    this.elements.masterDataForm.addEventListener('submit', (e) => this.saveMasterData(e));
+                    this.elements.masterCompanyLogoBtn.addEventListener('click', () => this.elements.masterCompanyLogoInput.click());
+                    this.elements.masterCompanyLogoInput.addEventListener('change', (e) => this.handleMasterDataImage(e.target.files[0], 'companyLogo'));
+                    this.elements.masterEmployeePicBtn.addEventListener('click', () => this.elements.masterEmployeePicInput.click());
+                    this.elements.masterEmployeePicInput.addEventListener('change', (e) => this.handleMasterDataImage(e.target.files[0], 'employeePic'));
+
                     this.elements.darkModeToggle.addEventListener('change', (e) => {
                         this.state.darkMode = e.target.checked;
                         this.saveState();
@@ -1511,6 +1641,7 @@
                 
                 deleteAllData() {
                     this.state.reports = [];
+                    this.state.masterData = { companyName: '', companyLogo: '', employeeName: '', employeePic: '' };
                     this.saveState();
                     this.render();
                     this.showToast('Alle Daten wurden gelöscht.');
@@ -1535,27 +1666,45 @@
                     this.elements.receiptCameraInput.value = '';
                 },
 
-                compressImage(src, callback) {
+                handleMasterDataImage(file, key) {
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.compressImage(e.target.result, (compressedDataUrl) => {
+                            this.state.masterData[key] = compressedDataUrl;
+                            this.renderSettings();
+                        }, 200); // Smaller size for logos
+                    };
+                    reader.readAsDataURL(file);
+                },
+                
+                saveMasterData(e) {
+                    e.preventDefault();
+                    this.state.masterData.companyName = this.elements.masterCompanyNameInput.value;
+                    this.state.masterData.employeeName = this.elements.masterEmployeeNameInput.value;
+                    this.saveState();
+                    this.showToast('Stammdaten gespeichert!');
+                },
+
+                compressImage(src, callback, maxSize = 1024) {
                     const img = new Image();
                     img.src = src;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
                         
-                        const MAX_WIDTH = 1024;
-                        const MAX_HEIGHT = 1024;
                         let width = img.width;
                         let height = img.height;
 
                         if (width > height) {
-                            if (width > MAX_WIDTH) {
-                                height *= MAX_WIDTH / width;
-                                width = MAX_WIDTH;
+                            if (width > maxSize) {
+                                height *= maxSize / width;
+                                width = maxSize;
                             }
                         } else {
-                            if (height > MAX_HEIGHT) {
-                                width *= MAX_HEIGHT / height;
-                                height = MAX_HEIGHT;
+                            if (height > maxSize) {
+                                width *= maxSize / height;
+                                height = maxSize;
                             }
                         }
                         
@@ -1573,15 +1722,15 @@
                     container.innerHTML = '';
                     this.state.tempReceipts.forEach((imgData, index) => {
                         const item = document.createElement('div');
-                        item.className = 'receipt-preview-item';
+                        item.className = 'image-preview-item';
                         item.innerHTML = `
                             <img src="${imgData}" alt="Beleg-Vorschau ${index + 1}">
-                            <button type="button" class="remove-receipt-btn" data-index="${index}">&times;</button>
+                            <button type="button" class="remove-image-btn" data-index="${index}">&times;</button>
                         `;
                         container.appendChild(item);
                     });
                     
-                    container.querySelectorAll('.remove-receipt-btn').forEach(btn => {
+                    container.querySelectorAll('.remove-image-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             const indexToRemove = parseInt(e.target.dataset.index, 10);
                             this.state.tempReceipts.splice(indexToRemove, 1);
@@ -1682,7 +1831,11 @@
 
                 // --- DATA EXPORT & SETTINGS ---
                 backupData() {
-                    const dataStr = JSON.stringify(this.state.reports, null, 2);
+                    const dataToBackup = {
+                        reports: this.state.reports,
+                        masterData: this.state.masterData
+                    };
+                    const dataStr = JSON.stringify(dataToBackup, null, 2);
                     const dataBlob = new Blob([dataStr], {type: "application/json"});
                     const url = URL.createObjectURL(dataBlob);
                     const link = document.createElement('a');
@@ -1702,9 +1855,10 @@
                     reader.onload = (e) => {
                         try {
                             const restoredData = JSON.parse(e.target.result);
-                            if (Array.isArray(restoredData) && (restoredData.length === 0 || restoredData[0].id)) {
+                            if (restoredData.reports && restoredData.masterData) {
                                 this.showConfirmModal('Daten wiederherstellen?', 'Möchten Sie die aktuellen Daten wirklich mit dem Inhalt der Backup-Datei überschreiben?', () => {
-                                    this.state.reports = restoredData;
+                                    this.state.reports = restoredData.reports;
+                                    this.state.masterData = restoredData.masterData;
                                     this.saveState();
                                     this.switchView('reports-view');
                                     this.render();
@@ -1793,126 +1947,235 @@
                         return;
                     }
                     
-                    let employeeName = monthlyReports[0].employeeName;
-                    const travelExpenses = [];
-                    const hospitalityExpenses = [];
+                    let employeeName = this.state.masterData.employeeName || monthlyReports[0].employeeName;
+                    const allExpenses = monthlyReports.flatMap(r => r.expenses);
 
-                    monthlyReports.forEach(report => {
-                        if (report.reportType === 'reise') {
-                            travelExpenses.push(...report.expenses);
-                        } else {
-                            hospitalityExpenses.push(...report.expenses);
-                        }
-                    });
-
-                    this.exportMonthlySummaryToPDF(month, employeeName, travelExpenses, hospitalityExpenses);
+                    this.exportStyledMonthlySummaryPDF(month, employeeName, allExpenses);
                     this.hideMonthSelectModal();
                 },
 
-                exportMonthlySummaryToPDF(month, employeeName, travelExpenses, hospitalityExpenses) {
+                exportStyledMonthlySummaryPDF(month, employeeName, allExpenses) {
                     const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF();
+                    const doc = new jsPDF('l', 'mm', 'a4'); // 'l' for landscape
                     const monthString = new Date(month + '-02').toLocaleString('de-DE', { month: 'long', year: 'numeric' });
                     
-                    doc.setFontSize(18);
-                    doc.text(`Monatliche Gesamtabrechnung: ${monthString}`, 14, 22);
-                    doc.setFontSize(11);
-                    doc.setTextColor(100);
-                    doc.text(`Mitarbeiter: ${employeeName}`, 14, 30);
-                    
-                    let finalY = 35;
-                    let totalTravel = 0;
-                    let totalHospitality = 0;
+                    const MARGIN = 15;
+                    const PAGE_WIDTH = doc.internal.pageSize.getWidth();
+                    const PAGE_HEIGHT = doc.internal.pageSize.getHeight();
+                    const FONT_NORMAL = 9;
+                    const FONT_HEADER = 10;
+                    const LINE_HEIGHT = 7;
+                    let yPos = MARGIN;
 
-                    if (travelExpenses.length > 0) {
-                        doc.setFontSize(14);
-                        doc.text('Reisekosten', 14, finalY + 10);
-                        const head = [['Datum', 'Kategorie', 'Beschreibung', 'Betrag (€)']];
-                        const body = travelExpenses.map(e => {
-                            totalTravel += e.amount;
-                             let description = e.description;
-                            if (e.category === 'fahrt' && e.details) {
-                                description += `\n(${e.details.startAddress || ''} -> ${e.details.endAddress || ''} | ${e.details.distance || ''} km)`;
-                            }
-                            if (e.category === 'verpflegung' && e.details && e.details.startDateTime) {
-                                const start = new Date(e.details.startDateTime).toLocaleString('de-DE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
-                                const end = new Date(e.details.endDateTime).toLocaleString('de-DE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
-                                description += `\n(Dauer: ${start} - ${end})`;
-                            }
-                            return [
-                                new Date(e.date).toLocaleDateString('de-DE'),
-                                this.getCategoryLabel(e.category),
-                                description,
-                                { content: e.amount.toFixed(2), styles: { halign: 'right' } }
-                            ];
-                        });
-                        doc.autoTable({ head, body, startY: finalY + 15, theme: 'grid' });
-                        finalY = doc.lastAutoTable.finalY;
+                    const checkPageBreak = (neededHeight = LINE_HEIGHT * 2) => {
+                        if (yPos + neededHeight > PAGE_HEIGHT - MARGIN) {
+                            doc.addPage();
+                            yPos = MARGIN;
+                            return true;
+                        }
+                        return false;
+                    };
+
+                    // === HEADER ===
+                    if (this.state.masterData.companyLogo) {
+                        try {
+                           doc.addImage(this.state.masterData.companyLogo, 'JPEG', PAGE_WIDTH - MARGIN - 30, MARGIN, 30, 0);
+                        } catch(e) { console.error("Error adding company logo to PDF:", e); }
+                    }
+                    doc.setFontSize(16);
+                    doc.text('Reisekostenabrechnung', MARGIN, yPos);
+                    yPos += LINE_HEIGHT * 2;
+                    doc.setFontSize(FONT_NORMAL);
+                    doc.text(`Firma: ${this.state.masterData.companyName || 'N/A'}`, MARGIN, yPos);
+                    yPos += LINE_HEIGHT;
+                    doc.text(`Name: ${employeeName}`, MARGIN, yPos);
+                    doc.text(`Zeitraum: ${monthString}`, PAGE_WIDTH / 2, yPos);
+                    
+                    if (this.state.masterData.employeePic) {
+                        try {
+                           doc.addImage(this.state.masterData.employeePic, 'JPEG', MARGIN, yPos + 2, 20, 20);
+                           yPos += 25;
+                        } catch(e) { 
+                            console.error("Error adding employee pic to PDF:", e);
+                            yPos += LINE_HEIGHT * 2;
+                        }
+                    } else {
+                        yPos += LINE_HEIGHT * 2;
                     }
 
-                    if (hospitalityExpenses.length > 0) {
-                        doc.setFontSize(14);
-                        doc.text('Bewirtungskosten', 14, finalY + 15);
-                        const head = [['Datum', 'Anlass/Teilnehmer', 'Rechnungsbetrag', 'Trinkgeld', 'Gesamt (€)']];
-                        const body = hospitalityExpenses.map(e => {
-                             totalHospitality += e.amount;
-                             return [
-                                new Date(e.date).toLocaleDateString('de-DE'),
-                                e.description,
-                                { content: (e.details.invoiceAmount || 0).toFixed(2), styles: { halign: 'right' } },
-                                { content: (e.details.tip || 0).toFixed(2), styles: { halign: 'right' } },
-                                { content: e.amount.toFixed(2), styles: { halign: 'right' } }
-                            ];
+
+                    // --- Data Segregation ---
+                    const reisebelege = allExpenses.filter(e => ['übernachtung', 'geschäftsessen'].includes(e.category));
+                    const kilometergeld = allExpenses.filter(e => e.category === 'fahrt');
+                    const verpflegung = allExpenses.filter(e => e.category === 'verpflegung');
+                    const bewirtung = allExpenses.filter(e => e.category === 'bewirtung');
+                    const sonstige = allExpenses.filter(e => e.category === 'sonstiges');
+                    let grandTotal = 0;
+
+                    // === SECTIONS ===
+                    const drawSection = (title, headers, data, dataMapper) => {
+                        if (data.length === 0) return;
+                        checkPageBreak(LINE_HEIGHT * 4);
+                        doc.setFontSize(FONT_HEADER);
+                        doc.setFont(undefined, 'bold');
+                        doc.text(title, MARGIN, yPos);
+                        yPos += LINE_HEIGHT;
+                        doc.setDrawColor(0);
+                        doc.line(MARGIN, yPos, PAGE_WIDTH - MARGIN, yPos);
+                        yPos += LINE_HEIGHT / 2;
+
+                        doc.setFontSize(FONT_NORMAL);
+                        doc.setFont(undefined, 'bold');
+                        headers.forEach(header => doc.text(header.text, header.x, yPos));
+                        yPos += LINE_HEIGHT / 2;
+                        doc.line(MARGIN, yPos, PAGE_WIDTH - MARGIN, yPos);
+                        
+                        let sum = 0;
+                        doc.setFont(undefined, 'normal');
+                        data.forEach((item, index) => {
+                            checkPageBreak();
+                            yPos += LINE_HEIGHT;
+                            const rowData = dataMapper(item, index);
+                            rowData.forEach((col, i) => doc.text(col.text, headers[i].x, yPos, col.options));
+                            sum += item.amount;
                         });
-                        doc.autoTable({ head, body, startY: finalY + 20, theme: 'grid' });
-                        finalY = doc.lastAutoTable.finalY;
-                    }
-                    
-                    finalY += 15;
-                    const grandTotal = totalTravel + totalHospitality;
 
-                    doc.setFontSize(12);
-                    doc.setFont(undefined, 'bold');
-                    doc.text('Gesamtkosten des Monats:', 14, finalY);
-                    doc.text(`${grandTotal.toFixed(2)} €`, 200, finalY, { align: 'right' });
+                        checkPageBreak();
+                        yPos += LINE_HEIGHT / 2;
+                        doc.line(MARGIN, yPos, PAGE_WIDTH - MARGIN, yPos);
+                        yPos += LINE_HEIGHT;
+                        doc.setFont(undefined, 'bold');
+                        doc.text(`Summe ${title}`, MARGIN, yPos);
+                        doc.text(`${sum.toFixed(2)} €`, headers.find(h => h.text === 'Betrag' || h.text === 'Gesamt (€)').x, yPos, {align: 'right'});
+                        yPos += LINE_HEIGHT * 2;
+                        grandTotal += sum;
+                    };
 
-                    // --- Add receipts ---
-                    const allExpensesWithReceipts = [...travelExpenses, ...hospitalityExpenses].filter(
-                        e => e.receiptImages && e.receiptImages.length > 0
+                    drawSection('REISEBELEGE', 
+                        [{text: 'Datum', x: MARGIN}, {text: 'Beleg Nr.', x: 40}, {text: 'Reiseanlass und -ziel', x: 60}, {text: 'Betrag', x: 250}, {text: 'Anmerkung', x: 270}],
+                        reisebelege,
+                        (item, index) => [
+                            { text: new Date(item.date).toLocaleDateString('de-DE'), options: {} },
+                            { text: `${index + 1}`, options: {} },
+                            { text: item.description, options: {} },
+                            { text: item.amount.toFixed(2), options: { align: 'right' } },
+                            { text: '', options: {} }
+                        ]
                     );
 
-                    if (allExpensesWithReceipts.length > 0) {
-                        doc.addPage();
-                        finalY = 20;
-                        doc.setFontSize(16);
-                        doc.text('Belege', 14, finalY);
-                        finalY += 10;
+                    drawSection('KILOMETERGELDERSTATTUNG PKW', 
+                        [{text: 'Datum', x: MARGIN}, {text: 'Reiseanlass und -ziel', x: 50}, {text: 'km', x: 230}, {text: 'Betrag', x: 250}, {text: 'Anmerkung', x: 270}],
+                        kilometergeld,
+                        (item) => [
+                            { text: new Date(item.date).toLocaleDateString('de-DE'), options: {} },
+                            { text: item.description, options: {} },
+                            { text: `${item.details.distance || '0'}`, options: { align: 'right' } },
+                            { text: item.amount.toFixed(2), options: { align: 'right' } },
+                            { text: '', options: {} }
+                        ]
+                    );
+                     
+                    drawSection('VERPFLEGUNGSMEHRAUFWAND',
+                        [{text: 'Datum', x: MARGIN}, {text: 'Reiseanlass und -ziel', x: 50}, {text: 'Stunden', x: 230}, {text: 'Betrag', x: 250}, {text: 'Anmerkung', x: 270}],
+                        verpflegung,
+                        (item) => {
+                            let hours = 0;
+                            if(item.details.startDateTime && item.details.endDateTime) {
+                                hours = (new Date(item.details.endDateTime) - new Date(item.details.startDateTime)) / (1000 * 60 * 60);
+                            }
+                             return [
+                                { text: new Date(item.date).toLocaleDateString('de-DE'), options: {} },
+                                { text: item.description, options: {} },
+                                { text: hours.toFixed(1), options: { align: 'right' } },
+                                { text: item.amount.toFixed(2), options: { align: 'right' } },
+                                { text: '', options: {} }
+                            ];
+                        }
+                    );
 
-                        allExpensesWithReceipts.forEach(expense => {
-                            expense.receiptImages.forEach(imgData => {
-                                if (finalY > doc.internal.pageSize.height - 80) { // Check space for image
-                                    doc.addPage();
-                                    finalY = 20;
-                                }
-                                try {
-                                    doc.setFontSize(9);
-                                    doc.setTextColor(150);
-                                    const caption = `${new Date(expense.date).toLocaleDateString('de-DE')}: ${expense.description}`;
-                                    doc.text(caption, 14, finalY - 2);
-                                    doc.addImage(imgData, 'JPEG', 14, finalY, 80, 0); // auto-height
-                                    finalY += 70; // Approximation for image height + margin
-                                } catch(e) {
-                                    console.error("Fehler beim Hinzufügen des Bildes zum PDF:", e);
-                                    doc.text('Bild konnte nicht geladen werden.', 14, finalY);
-                                    finalY += 10;
-                                }
-                            });
-                        });
+                    drawSection('BEWIRTUNGSAUFWENDUNGEN',
+                        [{text: 'Datum', x: MARGIN}, {text: 'Anlass der Bewirtung', x: 50}, {text: 'Trinkgeld', x: 230}, {text: 'Gesamt (€)', x: 250}, {text: 'Anmerkung', x: 270}],
+                        bewirtung,
+                        (item) => [
+                            { text: new Date(item.date).toLocaleDateString('de-DE'), options: {} },
+                            { text: item.description, options: {} },
+                            { text: (item.details.tip || 0).toFixed(2), options: { align: 'right' } },
+                            { text: item.amount.toFixed(2), options: { align: 'right' } },
+                            { text: '', options: {} }
+                        ]
+                    );
+
+                    drawSection('SONSTIGE AUSLAGEN',
+                        [{text: 'Datum', x: MARGIN}, {text: 'Beleg Nr.', x: 40}, {text: 'Bezeichnung', x: 60}, {text: 'Betrag', x: 250}, {text: 'Anmerkung', x: 270}],
+                        sonstige,
+                        (item, index) => [
+                            { text: new Date(item.date).toLocaleDateString('de-DE'), options: {} },
+                            { text: `${index + 1}`, options: {} },
+                            { text: item.description, options: {} },
+                            { text: item.amount.toFixed(2), options: { align: 'right' } },
+                            { text: '', options: {} }
+                        ]
+                    );
+                    
+                    // --- FOOTER ---
+                    checkPageBreak(LINE_HEIGHT * 4);
+                    doc.setDrawColor(0);
+                    doc.line(MARGIN, yPos, PAGE_WIDTH - MARGIN, yPos);
+                    yPos += LINE_HEIGHT;
+                    doc.setFontSize(FONT_HEADER);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Gesamtsumme', MARGIN, yPos);
+                    doc.text(`${grandTotal.toFixed(2)} €`, 250, yPos, {align: 'right'});
+                    yPos += LINE_HEIGHT * 3;
+
+                    checkPageBreak(LINE_HEIGHT * 4);
+                    doc.setFontSize(FONT_NORMAL);
+                    doc.setFont(undefined, 'normal');
+                    doc.text(`${this.state.masterData.companyName || 'Ort'}, ${new Date().toLocaleDateString('de-DE')}`, MARGIN, yPos);
+                    yPos += LINE_HEIGHT * 2;
+                    doc.line(PAGE_WIDTH / 2, yPos, PAGE_WIDTH - MARGIN, yPos);
+                    yPos += 4;
+                    doc.text('Unterschrift', PAGE_WIDTH / 2, yPos);
+
+                    // --- Add receipts ---
+                    const allExpensesWithReceipts = allExpenses.filter(e => e.receiptImages && e.receiptImages.length > 0);
+                    if (allExpensesWithReceipts.length > 0) {
+                        this.addReceiptsToPDF(doc, allExpensesWithReceipts, MARGIN);
                     }
                     
                     doc.save(`Monatsabrechnung_${month}_${employeeName.replace(/\s/g, '_')}.pdf`);
                 },
 
+                addReceiptsToPDF(doc, expensesWithReceipts, MARGIN) {
+                    const PAGE_WIDTH = doc.internal.pageSize.getWidth();
+                    const PAGE_HEIGHT = doc.internal.pageSize.getHeight();
+                    doc.addPage();
+                    let yPos = MARGIN;
+                    doc.setFontSize(16);
+                    doc.text('Belege', MARGIN, yPos);
+                    yPos += 10;
+
+                    expensesWithReceipts.forEach(expense => {
+                        expense.receiptImages.forEach(imgData => {
+                            if (yPos > PAGE_HEIGHT - 80) { // Check space for image
+                                doc.addPage();
+                                yPos = MARGIN;
+                            }
+                            try {
+                                doc.setFontSize(9);
+                                doc.setTextColor(150);
+                                const caption = `${new Date(expense.date).toLocaleDateString('de-DE')}: ${expense.description}`;
+                                doc.text(caption, MARGIN, yPos - 2);
+                                doc.addImage(imgData, 'JPEG', MARGIN, yPos, 80, 0); // auto-height
+                                yPos += 70; // Approximation for image height + margin
+                            } catch(e) {
+                                console.error("Fehler beim Hinzufügen des Bildes zum PDF:", e);
+                                doc.text('Bild konnte nicht geladen werden.', MARGIN, yPos);
+                                yPos += 10;
+                            }
+                        });
+                    });
+                },
 
                 exportToPDF() {
                     const { jsPDF } = window.jspdf;
@@ -1920,16 +2183,40 @@
                     const report = this.state.reports.find(r => r.id === this.state.currentReportId);
                     if (!report) return;
 
+                    const MARGIN = 14;
+                    const PAGE_WIDTH = doc.internal.pageSize.getWidth();
                     const reportTypeLabel = report.reportType === 'reise' ? 'Reisekostenabrechnung' : 'Bewirtungskostenabrechnung';
                     
+                    let yPos = 22;
+
+                    if (this.state.masterData.companyLogo) {
+                        try {
+                           doc.addImage(this.state.masterData.companyLogo, 'JPEG', PAGE_WIDTH - MARGIN - 30, MARGIN, 30, 0);
+                        } catch(e) { console.error("Error adding company logo to PDF:", e); }
+                    }
+
                     doc.setFontSize(18);
-                    doc.text(`${reportTypeLabel}: ${report.name}`, 14, 22);
+                    doc.text(`${reportTypeLabel}: ${report.name}`, MARGIN, yPos);
+                    yPos += 8;
                     doc.setFontSize(11);
                     doc.setTextColor(100);
-                    doc.text(`Mitarbeiter: ${report.employeeName}`, 14, 30);
-                    doc.text(`Abrechnungsmonat: ${new Date(report.billingMonth + '-02').toLocaleString('de-DE', { month: 'long', year: 'numeric' })}`, 14, 36);
+                    doc.text(`Mitarbeiter: ${report.employeeName}`, MARGIN, yPos);
+                    yPos += 6;
+                    doc.text(`Abrechnungsmonat: ${new Date(report.billingMonth + '-02').toLocaleString('de-DE', { month: 'long', year: 'numeric' })}`, MARGIN, yPos);
+                    
+                    if (this.state.masterData.employeePic) {
+                        try {
+                           doc.addImage(this.state.masterData.employeePic, 'JPEG', MARGIN, yPos + 2, 20, 20);
+                           yPos += 25;
+                        } catch(e) { 
+                            console.error("Error adding employee pic to PDF:", e);
+                            yPos += 8;
+                        }
+                    } else {
+                        yPos += 8;
+                    }
 
-                    let head, body, finalY;
+                    let head, body;
                     
                     if(report.reportType === 'reise') {
                         head = [['Datum', 'Kategorie', 'Beschreibung', 'Betrag (€)']];
@@ -1953,51 +2240,27 @@
                     doc.autoTable({
                         head: head,
                         body: body,
-                        startY: 45,
+                        startY: yPos,
                         theme: 'grid'
                     });
                     
-                    finalY = doc.lastAutoTable.finalY + 10;
+                    let finalYTable = doc.lastAutoTable.finalY + 10;
                     const total = this.calculateReportTotal(report);
                     const totalVat = this.calculateReportVat(report);
 
                     doc.setFontSize(11);
                     doc.setFont(undefined, 'bold');
-                    doc.text('Gesamtsumme:', 14, finalY);
-                    doc.text(`${total.toFixed(2)} €`, 200, finalY, { align: 'right' });
+                    doc.text('Gesamtsumme:', MARGIN, finalYTable);
+                    doc.text(`${total.toFixed(2)} €`, 200, finalYTable, { align: 'right' });
                     
                     doc.setFont(undefined, 'normal');
-                    doc.text('Davon enthaltene MwSt.:', 14, finalY + 6);
-                    doc.text(`${totalVat.toFixed(2)} €`, 200, finalY + 6, { align: 'right' });
+                    doc.text('Davon enthaltene MwSt.:', MARGIN, finalYTable + 6);
+                    doc.text(`${totalVat.toFixed(2)} €`, 200, finalYTable + 6, { align: 'right' });
 
                     // --- Add receipts for single report ---
                     const expensesWithReceipts = report.expenses.filter(e => e.receiptImages && e.receiptImages.length > 0);
                     if (expensesWithReceipts.length > 0) {
-                        doc.addPage();
-                        finalY = 20;
-                        doc.setFontSize(16);
-                        doc.text('Belege', 14, finalY);
-                        finalY += 10;
-
-                        expensesWithReceipts.forEach(expense => {
-                            expense.receiptImages.forEach(imgData => {
-                                if (finalY > doc.internal.pageSize.height - 80) {
-                                    doc.addPage();
-                                    finalY = 20;
-                                }
-                                try {
-                                    doc.setFontSize(9);
-                                    doc.setTextColor(150);
-                                    doc.text(`${new Date(expense.date).toLocaleDateString('de-DE')}: ${expense.description}`, 14, finalY - 2);
-                                    doc.addImage(imgData, 'JPEG', 14, finalY, 80, 0);
-                                    finalY += 70;
-                                } catch(e) {
-                                    console.error("Fehler beim Hinzufügen des Bildes zum PDF:", e);
-                                    doc.text('Bild konnte nicht geladen werden.', 14, finalY);
-                                    finalY += 10;
-                                }
-                            });
-                        });
+                        this.addReceiptsToPDF(doc, expensesWithReceipts, MARGIN);
                     }
 
                     doc.save(`${reportTypeLabel}_${report.name.replace(/\s/g, '_')}.pdf`);
